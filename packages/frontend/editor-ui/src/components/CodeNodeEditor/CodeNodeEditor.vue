@@ -21,12 +21,14 @@ import { useSettingsStore } from '@/stores/settings.store';
 import { dropInCodeEditor } from '@/plugins/codemirror/dragAndDrop';
 import type { TargetNodeParameterContext } from '@/Interface';
 
+export type CodeNodeLanguageOption = CodeNodeEditorLanguage | 'pythonNative';
+
 type Props = {
 	mode: CodeExecutionMode;
 	modelValue: string;
 	aiButtonEnabled?: boolean;
 	fillParent?: boolean;
-	language?: CodeNodeEditorLanguage;
+	language?: CodeNodeLanguageOption;
 	isReadOnly?: boolean;
 	rows?: number;
 	id?: string;
@@ -63,7 +65,7 @@ const settingsStore = useSettingsStore();
 
 const linter = useLinter(
 	() => props.mode,
-	() => props.language,
+	() => (props.language === 'pythonNative' ? 'python' : props.language),
 );
 const extensions = computed(() => [linter.value]);
 const placeholder = computed(() => CODE_PLACEHOLDERS[props.language]?.[props.mode] ?? '');
@@ -71,7 +73,7 @@ const dragAndDropEnabled = computed(() => {
 	return !props.isReadOnly;
 });
 
-const { highlightLine, readEditorValue, editor } = useCodeEditor({
+const { highlightLine, readEditorValue, editor, focus } = useCodeEditor({
 	id: props.id,
 	editorRef: codeNodeEditorRef,
 	language: () => props.language,
@@ -208,6 +210,10 @@ async function onDrop(value: string, event: MouseEvent) {
 
 	await dropInCodeEditor(toRaw(editor.value), event, valueToInsert);
 }
+
+defineExpose({
+	focus,
+});
 </script>
 
 <template>
@@ -259,6 +265,7 @@ async function onDrop(value: string, event: MouseEvent) {
 				<AskAI
 					:key="activeTab"
 					:has-changes="hasManualChanges"
+					:is-read-only="props.isReadOnly"
 					@replace-code="onAiReplaceCode"
 					@started-loading="onAiLoadStart"
 					@finished-loading="onAiLoadEnd"
